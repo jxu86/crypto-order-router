@@ -47,24 +47,42 @@ class OrderRouter(object):
         def fill_obj(o):
             side, o_type = self._decode_type(o.order_type)
             return {
-                'instrument_id': instrument_id,
-                'order_id': str(o.order_id),
-                'client_oid': '',
-                'price': o.price,
-                'size': o.amount,
-                'timestamp': o.created_timestamp,
-                'finished_timestamp': o.finished_timestamp,
-                'finished_datetime': self._timestamp_to_datetime(o.finished_timestamp),
-                'canceled_timestamp': o.canceled_timestamp,
-                'datetime': self._timestamp_to_datetime(o.created_timestamp),
-                'filled_size': o.filled_amount,
-                'filled_notional': o.filled_cash_amount,
-                'side': side,
-                'type': o_type,
-                'state': o.state,
-                'status': self._decode_state(o.state),
-                'created_at': datetime.datetime.now(),
-                'updated_at': datetime.datetime.now()
+                'instrument_id':
+                instrument_id,
+                'order_id':
+                str(o.order_id),
+                'client_oid':
+                '',
+                'price':
+                o.price,
+                'size':
+                o.amount,
+                'timestamp':
+                o.created_timestamp,
+                'finished_timestamp':
+                o.finished_timestamp,
+                'finished_datetime':
+                self._timestamp_to_datetime(o.finished_timestamp),
+                'canceled_timestamp':
+                o.canceled_timestamp,
+                'datetime':
+                self._timestamp_to_datetime(o.created_timestamp),
+                'filled_size':
+                o.filled_amount,
+                'filled_notional':
+                o.filled_cash_amount,
+                'side':
+                side,
+                'type':
+                o_type,
+                'state':
+                o.state,
+                'status':
+                self._decode_state(o.state),
+                'created_at':
+                datetime.datetime.now(),
+                'updated_at':
+                datetime.datetime.now()
             }
 
         if isinstance(order_info, list):
@@ -191,7 +209,36 @@ class OrderRouter(object):
         return None
 
     def get_account_info(self):
-        pass
+        account_balances = self._api.get_account_balance_by_account_type(
+            self.account_type)
+        details_obj = {}
+        for b in account_balances.balances:
+            if b.balance:
+                if b.currency not in details_obj:
+                    if b.balance_type == BalanceType.TRADE:
+                        details_obj[b.currency] = {
+                            'currency': b.currency.upper(),
+                            'frozen': 0,
+                            'balance': b.balance,
+                            'available': b.balance
+                        }
+                    elif b.balance_type == BalanceType.FROZEN:
+                        details_obj[b.currency] = {
+                            'currency': b.currency.upper(),
+                            'frozen': b.balance,
+                            'balance': b.balance,
+                            'available': 0
+                        }
+                else:
+                    if b.balance_type == BalanceType.TRADE:
+                        details_obj[b.currency]['available'] += b.balance
+                        details_obj[b.currency]['balance'] += b.balance
+
+                    elif b.balance_type == BalanceType.FROZEN:
+                        details_obj[b.currency]['frozen'] += b.balance
+                        details_obj[b.currency]['balance'] += b.balance
+
+        return list(details_obj.values())
 
     def get_coin_account_info(self, symbol):
         balances = self._api.get_account_balance_by_account_type(
