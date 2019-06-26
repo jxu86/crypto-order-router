@@ -180,23 +180,17 @@ class OrderRouter(object):
         info = self.spot_api.get_coin_account_info(symbol)
         return float(info.get('available', '0'))
 
-    def get_orders(self, symbol, stime, etime, state=''):
+    def get_orders(self, instrument_id, stime, etime, state=''):
         froms = None
         order_list = []
         last_order = {}
         after = ''
         while True:
-            if froms == None:
-                orders = self.spot_api.get_orders_list(state, symbol)
-            else:
-                orders = self.spot_api.get_orders_list(state, symbol, froms=froms)
-            order_position = orders[1]
-            orders = list(orders[0])
+            orders = list(self.spot_api.get_orders_list(state, instrument_id, froms=froms)[0])
 
             if len(orders) <= 0:
                 break
 
-            after = order_position['after']
             if len(order_list) and order_list[-1] == orders[0]:
                 order_list = order_list + orders[1:]
             else:
@@ -204,14 +198,10 @@ class OrderRouter(object):
 
             if stime == '' and etime == '':
                 break
-            # print('orders len=>', len(order_list))
             if utils.utcstr_to_datetime(order_list[-1]['timestamp']) <= stime:
                 break
 
-            # if to == order_list[-1]['order_id']:
-            #     break
             froms = order_list[-1]['order_id']
-            # print('froms ==>', froms)
             time.sleep(1)
         new_order_list = []
         for l in order_list:
@@ -230,3 +220,55 @@ class OrderRouter(object):
                 new_order_list.append(l)
             l = str(l)
         return new_order_list
+
+    def get_ledgers(self, symbol):
+        # self.info('Fetching ledgers, symbol: %s, time: [%s / %s]', symbol,
+        #           self._start_time, self._end_time)
+
+        results = []
+        froms = None
+        page = 1
+        while True:
+            result = self.spot_api.get_ledger_record(symbol, limit=100, froms=froms)
+            if not result:
+                break
+
+            print('Fetched page %d, len: %d', page, len(result))
+            results += result
+
+            if utils.utcstr_to_datetime(
+                    results[-1]['timestamp']) <= self._start_time:
+                break
+
+            froms = results[-1]['ledger_id']
+            page += 1
+
+            self._sleep()
+
+        ledgers = []
+        for ledger in results:
+            ledger['datetime'] = utils.utcstr_to_datetime(ledger['timestamp'])
+            ledger['balance'] = float(ledger['balance'])
+            if (ledger['datetime'] >= self._start_time
+                    and ledger['datetime'] <= self._end_time):
+                ledgers += [ledger]
+        self.info('Fetched ledgers, symbol: %s, ledgers: %d', symbol,
+                  len(ledgers))
+
+        fixed_ids = self._get_fixed_ledger_ids()
+        self.info('Found existed ledger details, len: %d', len(fixed_ids))
+
+        missing_detail_ledgers = [
+            ledger for ledger in ledgers if ledger['ledger_id'] not in fixed_ids
+        ]
+        self.info('Still %d missing ledger details, %s...',
+                  len(missing_detail_ledgers),
+                  [l['ledger_id'] for l in missing_detail_ledgers[:5]])
+
+        details = sum([
+            self.get_ledger_details(ledger) for ledger in missing_detail_ledgers
+        ], [])
+        self.info('Fetched ledger details, len: %d', len(details))
+
+        return ledgers, details
+

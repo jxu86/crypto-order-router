@@ -261,11 +261,14 @@ class OrderRouter(object):
         return self.get_coin_account_info(symbol)['available']
 
     def get_oneday_orders(self, instrument_id, stime, state):
+        if stime > datetime.datetime.now():
+            return []
+
         start_date = stime.strftime('%Y-%m-%d')
         end_date = start_date  # (stime + datetime.timedelta(days=1)).strftime('%Y-%m-%d')
         orders = []
         start_id = None
-        size = 990
+        size = 100
         format_instrument_id = self._format_instrument_id(instrument_id)
         while True:
             order = self._api.get_historical_orders(
@@ -282,7 +285,7 @@ class OrderRouter(object):
                 break
             else:
                 start_id = min([o['order_id'] for o in format_orders])
-
+            time.sleep(0.5)
         return orders
 
     def get_orders(self, instrument_id, stime, etime, state):
