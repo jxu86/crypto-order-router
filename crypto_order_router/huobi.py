@@ -8,9 +8,6 @@ from huobi.model import *
 import pandas as pd
 
 
-class ORDER_TYPE(OrderType):
-    pass
-
 
 class OrderRouter(object):
     def __init__(self, apikey, secretkey, password):
@@ -132,17 +129,22 @@ class OrderRouter(object):
         for param in params:
             instrument_id = self._format_instrument_id(param['instrument_id'])
             order_type = '{}-{}'.format(param['side'], param['type'])
-            order_id = self._api.create_order(instrument_id, self.account_type,
-                                              order_type, param['size'],
-                                              param['price'])
-            order_id = str(order_id)
-            print('submit order id: {}, order_type: {}, price: {}'.format(
-                order_id, order_type, param['price']))
-            ret.append({
-                'order_id': order_id,
-                'side': param['side'],
-                'price': param['price']
-            })
+            try:
+                order_id = self._api.create_order(instrument_id, self.account_type,
+                                                order_type, param['size'],
+                                                param['price'])
+                order_id = str(order_id)
+                print('submit order id: {}, order_type: {}, price: {}'.format(
+                    order_id, order_type, param['price']))
+                ret.append({
+                    'order_id': order_id,
+                    'side': param['side'],
+                    'price': param['price']
+                })
+            except Exception as e:
+                print('submit_orders err: {}'.format(e))
+                print('account type:{}, order_type:{}, size:{}, price:{}'.format(self.account_type, order_type, param['size'], param['price']))
+
             time.sleep(0.01)
 
         return ret
