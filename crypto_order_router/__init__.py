@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import importlib
-__all__ = ['okex', 'huobi', 'constant']
+__all__ = ['okex', 'huobi', 'huobi_future', 'constant']
 
 class OrderRouter(object):
     def __init__(self, exchange, apikey, secretkey, passphrase):
