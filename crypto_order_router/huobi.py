@@ -280,7 +280,7 @@ class OrderRouter(object):
                 end_date=end_date,
                 start_id=start_id,
                 size=size)
-            print('Fetched orders, pair: {}, total: {}'.format(instrument_id, len(order)))
+            print('Fetched orders, date: {}, pair: {}, total: {}'.format(start_date, instrument_id, len(order)))
             format_orders = self._format_order(instrument_id, order)
             orders += format_orders
             # print('Fetched orders, pair: %s, total: %d', instrument_id, len(format_orders))
